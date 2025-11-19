@@ -1,0 +1,53 @@
+body {
+  font-family: Arial, sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+#tracker {
+  max-height: 600px;
+  overflow-y: scroll;
+  border: 1px solid #ccc;
+  padding: 20px;
+}
+
+.bill {
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #eee;
+}
+
+.date {
+  font-size: 0.8em;
+  color: #666;
+  margin-bottom: 5px;
+}
+
+.title a {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #333;
+  text-decoration: none;
+}
+
+.title a:hover {
+  text-decoration: underline;
+}
+
+.description {
+  margin-top: 10px;
+  line-height: 1.4em;
+}
+
+footer {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.8em;
+  color: #666;
+}
