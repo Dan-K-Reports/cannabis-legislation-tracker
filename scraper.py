@@ -32,17 +32,38 @@ STATES = {
     'WI': 'Wisconsin', 'WY': 'Wyoming'
 }
 
+# Policy-relevant terms to filter noise
+POLICY_TERMS = [
+    'bank', 'tax', 'deduction', 'commerce', 'interstate',
+    'administration', 'regulation', 'decriminalization', 'scheduling',
+    'tribal', 'equity', 'expungement', 'legalization', 'medical',
+    'recreational', 'dispensary', 'cultivation', 'possession'
+]
+
+def is_relevant_bill(title, description):
+    """Filter out non-policy bills (e.g., hemp rope manufacturing)"""
+    
+    # Combine title and description for checking
+    text = (title + ' ' + description).lower()
+    
+    # Must contain at least one policy term
+    return any(term in text for term in POLICY_TERMS)
+
 def fetch_bills_for_state(state_code, state_name):
     """Fetch cannabis-related bills for a specific state"""
     
     print(f"Fetching bills for {state_name}...")
+    
+    # Federal bills: go back to 2020 to catch major legislation
+    # State bills: keep current + previous year (less noise)
+    year_param = 5 if state_code == 'US' else 2  # 5 years for federal, 2 for states
     
     # Search for cannabis-related bills
     search_url = LEGISCAN_BASE_URL.format(LEGISCAN_API_KEY, 'getSearch')
     search_params = {
         'state': state_code,
         'query': 'cannabis OR marijuana',
-        'year': 2  # Current + previous year
+        'year': year_param
     }
     
     try:
@@ -66,6 +87,7 @@ def fetch_bills_for_state(state_code, state_name):
         
         bills = []
         bill_count = 0
+        filtered_count = 0
         
         for bill_id, bill_data in search_results.items():
             if bill_id == 'summary':
@@ -86,14 +108,22 @@ def fetch_bills_for_state(state_code, state_name):
                     if bill_detail.get('status') == 'OK':
                         bill_info = bill_detail.get('bill', {})
                         
+                        title = bill_info.get('title', '')
+                        description = bill_info.get('description', '')
+                        
+                        # Filter out non-relevant bills
+                        if not is_relevant_bill(title, description):
+                            filtered_count += 1
+                            continue
+                        
                         # Extract key information
                         bill = {
                             'id': bill_info.get('bill_id'),
                             'state_code': state_code,
                             'state_name': state_name,
                             'bill_number': bill_info.get('bill_number'),
-                            'title': bill_info.get('title'),
-                            'description': bill_info.get('description', '')[:500],  # Limit description length
+                            'title': title,
+                            'description': description[:500],  # Limit description length
                             'status': bill_info.get('status_desc'),
                             'status_date': bill_info.get('status_date'),
                             'url': bill_info.get('url'),
@@ -120,7 +150,9 @@ def fetch_bills_for_state(state_code, state_name):
                 print(f"  ⚠ Error fetching bill details: {e}")
                 continue
         
-        print(f"  ✓ Found {len(bills)} bills for {state_name}")
+        if filtered_count > 0:
+            print(f"  ℹ Filtered out {filtered_count} non-policy bills")
+        print(f"  ✓ Found {len(bills)} relevant bills for {state_name}")
         return bills
         
     except Exception as e:
@@ -158,10 +190,12 @@ def save_bills_data(bills):
     
     # Group by state for statistics
     states_with_bills = set(bill['state_name'] for bill in bills)
+    federal_bills = [b for b in bills if b['state_code'] == 'US']
     
     output_data = {
         'last_updated': datetime.now().isoformat(),
         'total_bills': len(bills),
+        'federal_bills': len(federal_bills),
         'total_states': len(states_with_bills),
         'bills': bills
     }
@@ -174,6 +208,7 @@ def save_bills_data(bills):
     print("✓ SUCCESS!")
     print("=" * 70)
     print(f"Total bills found: {len(bills)}")
+    print(f"Federal bills: {len(federal_bills)}")
     print(f"States with bills: {len(states_with_bills)}")
     print(f"Last updated: {output_data['last_updated']}")
     print(f"Data saved to: bills.json")
@@ -188,9 +223,10 @@ def main():
         save_bills_data(bills)
         print("📝 Next Steps:")
         print("1. Review bills.json to identify significant bills for analysis")
-        print("2. Create analysis articles on silentmajority420.com")
-        print("3. Add analysis URLs to the 'analysis_url' field in bills.json")
-        print("4. Commit and push the updated bills.json to your repository")
+        print("2. Look for federal bills like SAFER Banking, MORE Act, STATES Act")
+        print("3. Create analysis articles on silentmajority420.com")
+        print("4. Add analysis URLs to the 'analysis_url' field in bills.json")
+        print("5. Commit and push the updated bills.json to your repository")
     else:
         print("❌ No bills found or error occurred")
 
