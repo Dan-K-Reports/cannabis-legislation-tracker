@@ -41,7 +41,21 @@ POLICY_TERMS = [
 ]
 
 def is_relevant_bill(title, description):
-    """Filter out non-policy bills (e.g., hemp rope manufacturing)"""
+    """Filter out non-policy bills - must be explicitly about cannabis policy"""
+    
+    # Combine title and description for checking
+    text = (title + ' ' + description).lower()
+    
+    # MUST contain cannabis/marijuana (excludes immigration, general criminal justice, etc.)
+    cannabis_mentioned = any(term in text for term in ['cannabis', 'marijuana', 'marihuana'])
+    
+    if not cannabis_mentioned:
+        return False
+    
+    # AND must contain at least one policy term (excludes tangential mentions)
+    policy_mentioned = any(term in text for term in POLICY_TERMS)
+    
+    return policy_mentioned
     
     # Combine title and description for checking
     text = (title + ' ' + description).lower()
