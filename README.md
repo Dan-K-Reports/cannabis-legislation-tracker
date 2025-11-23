@@ -1,6 +1,6 @@
 ## Federal Cannabis Legislation Tracker - All States Edition
 
-A comprehensive real-time tracker for cannabis legislation across all 50 U.S. states plus federal bills, with AI-powered analysis using the CBDT Framework.
+A comprehensive real-time tracker for cannabis legislation across all 50 U.S. states plus federal bills, with analysis using the CBDT Framework.
 
 ## Features
 
