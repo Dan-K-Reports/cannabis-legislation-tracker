@@ -7,8 +7,8 @@
     
     <!-- Main Tracker Page -->
     <url>
-        <loc>https://tracker.silentmajority420.com/</loc>
-        <lastmod>2024-11-23</lastmod>
+        <loc>https://tracker.dankreports.com/</loc>
+        <lastmod>2025-11-23</lastmod>
         <changefreq>daily</changefreq>
         <priority>1.0</priority>
     </url>
@@ -16,8 +16,8 @@
     <!-- Add individual state pages here as you create them -->
     <!-- Example:
     <url>
-        <loc>https://tracker.silentmajority420.com/state/california</loc>
-        <lastmod>2024-11-23</lastmod>
+        <loc>https://tracker.dankreports.com/state/california</loc>
+        <lastmod>2025-11-23</lastmod>
         <changefreq>weekly</changefreq>
         <priority>0.8</priority>
     </url>
@@ -26,7 +26,7 @@
     <!-- Federal Legislation Page (if separate) -->
     <!-- 
     <url>
-        <loc>https://tracker.silentmajority420.com/federal</loc>
+        <loc>https://tracker.dankreports.com/federal</loc>
         <lastmod>2024-11-23</lastmod>
         <changefreq>daily</changefreq>
         <priority>0.9</priority>
