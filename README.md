@@ -14,7 +14,7 @@ A comprehensive real-time tracker for cannabis legislation across all 50 U.S. st
 
 ## Live Demo
 
-Visit the tracker at: [Your GitHub Pages URL]
+Visit the tracker at: https://tracker.dankreports.com
 
 ## ⚠️ Important Notes
 
@@ -129,7 +129,7 @@ Review `bills.json` to find bills worthy of in-depth analysis:
 ### 3. Create Analysis Articles
 
 For significant bills:
-1. Write a comprehensive analysis article on silentmajority420.com
+1. Write a comprehensive analysis article on dankreports.com
 2. Apply the CBDT Framework to predict outcomes
 3. Publish the article and note its URL
 
@@ -141,7 +141,7 @@ Edit `bills.json` to add your analysis URL:
   "state_name": "California",
   "bill_number": "SB 420",
   "title": "Cannabis Tax Reform Act",
-  "analysis_url": "https://silentmajority420.com/ca-sb420-analysis"
+  "analysis_url": "https://www.dankreports.com/ca-sb420-analysis"
 }
 ```
 
@@ -293,8 +293,7 @@ MIT License - see [LICENSE](LICENSE) file for details.
 
 For questions or issues:
 - Open an issue on GitHub
-- Visit [silentmajority420.com](https://silentmajority420.com)
-- Email: [your contact email]
+- Email: danielkreports@gmail.com
 
 ## Acknowledgments
 
@@ -304,4 +303,4 @@ For questions or issues:
 
 ---
 
-**Built by Silent Majority 420** | [Website](https://silentmajority420.com) | [CBDT Framework](https://silentmajority420.com/cbdt-framework)
+**Built by Daniel Kief** | Dan K Reports(https://silentmajority420.com/cbdt-framework)
