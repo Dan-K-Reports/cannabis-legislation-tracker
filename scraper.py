@@ -361,30 +361,30 @@ def generate_html(bills, last_updated):
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     
     <!-- Primary Meta Tags -->
-    <title>Cannabis Legislation Tracker - Real-Time Bills Across All 50 States | Silent Majority 420</title>
-    <meta name="title" content="Cannabis Legislation Tracker - Real-Time Bills Across All 50 States | Silent Majority 420">
+    <title>Cannabis Legislation Tracker - Real-Time Bills Across All 50 States | Dan K Reports</title>
+    <meta name="title" content="Cannabis Legislation Tracker - Real-Time Bills Across All 50 States | Dan K Reports">
     <meta name="description" content="Track cannabis legislation in real-time across all 50 states and federal government. Monitor bills, status changes, and legislative progress with data-driven CBDT Framework analysis.">
     <meta name="keywords" content="cannabis legislation, marijuana bills, cannabis policy tracker, legalization tracker, cannabis reform, state cannabis laws, federal cannabis bills, CBDT Framework, cannabis market analysis">
-    <meta name="author" content="The Silent Majority 420">
+    <meta name="author" content="Daniel Kief">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
-    <link rel="canonical" href="https://tracker.silentmajority420.com/">
+    <link rel="canonical" href="https://tracker.dankreports.com/">
     
     <!-- Open Graph / Facebook Meta Tags -->
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://tracker.silentmajority420.com/">
+    <meta property="og:url" content="https://tracker.dankreports.com/">
     <meta property="og:title" content="Cannabis Legislation Tracker - Real-Time Bills Across All 50 States">
     <meta property="og:description" content="Track cannabis legislation in real-time across all 50 states and federal government. Monitor bills, status changes, and legislative progress with data-driven CBDT Framework analysis.">
-    <meta property="og:image" content="https://tracker.silentmajority420.com/og-image.jpg">
+    <meta property="og:image" content="https://tracker.dankreports.com/og-image.jpg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:site_name" content="Silent Majority 420 - Cannabis Legislation Tracker">
+    <meta property="og:site_name" content="Dan K Reports - Cannabis Legislation Tracker">
     
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="https://tracker.silentmajority420.com/">
+    <meta name="twitter:url" content="https://tracker.dankreports.com/">
     <meta name="twitter:title" content="Cannabis Legislation Tracker - Real-Time Bills Across All 50 States">
     <meta name="twitter:description" content="Track cannabis legislation in real-time across all 50 states and federal government with CBDT Framework analysis.">
-    <meta name="twitter:image" content="https://tracker.silentmajority420.com/og-image.jpg">
+    <meta name="twitter:image" content="https://tracker.dankreports.com/og-image.jpg">
     
     <!-- Additional SEO Meta Tags -->
     <meta name="theme-color" content="#2ecc71">
@@ -397,45 +397,44 @@ def generate_html(bills, last_updated):
     <link rel="apple-touch-icon" href="logo.png">
     
     <!-- Preconnect for Performance -->
-    <link rel="preconnect" href="https://silentmajority420.com">
-    <link rel="dns-prefetch" href="https://silentmajority420.com">
+    <link rel="preconnect" href="https://dankreports.com">
+    <link rel="dns-prefetch" href="https://dankreports.com">
     
     <!-- Stylesheet -->
     <link rel="stylesheet" href="style.css">
     
     <!-- Structured Data / Schema.org JSON-LD -->
     <script type="application/ld+json">
-    {{
+    {{{{
       "@context": "https://schema.org",
       "@graph": [
-        {{
+        {{{{
           "@type": "WebApplication",
-          "@id": "https://tracker.silentmajority420.com/#webapp",
+          "@id": "https://tracker.dankreports.com/#webapp",
           "name": "Cannabis Legislation Tracker",
           "applicationCategory": "GovernmentApplication",
           "operatingSystem": "Web Browser",
-          "url": "https://tracker.silentmajority420.com/",
+          "url": "https://tracker.dankreports.com/",
           "description": "Real-time tracking of cannabis legislation across all 50 states and federal government using LegiScan API with data-driven CBDT Framework analysis.",
-          "offers": {{
+          "offers": {{{{
             "@type": "Offer",
             "price": "0",
             "priceCurrency": "USD"
-          }},
-          "author": {{
+          }}}},
+          "author": {{{{
             "@type": "Person",
-            "name": "The Silent Majority 420",
-            "identifier": "https://orcid.org/0009-0003-6779-9910",
-            "url": "https://www.silentmajority420.com/author/the-silent-majority-420/"
-          }},
-          "publisher": {{
+            "name": "Daniel Kief",
+            "url": "https://www.dankreports.com/"
+          }}}},
+          "publisher": {{{{
             "@type": "Organization",
-            "name": "The Silent Majority 420 Project",
-            "url": "https://www.silentmajority420.com/",
-            "logo": {{
+            "name": "Dan K Reports",
+            "url": "https://www.dankreports.com/",
+            "logo": {{{{
               "@type": "ImageObject",
-              "url": "https://www.silentmajority420.com/content/images/size/w256h256/2025/11/output-onlinegiftools.gif"
-            }}
-          }},
+              "url": "https://www.dankreports.com/content/images/size/w256h256/2025/11/output-onlinegiftools.gif"
+            }}}}
+          }}}},
           "featureList": [
             "Real-time cannabis bill tracking across all 50 states",
             "Federal cannabis legislation monitoring",
@@ -444,60 +443,60 @@ def generate_html(bills, last_updated):
             "Advanced filtering by state, status, and keywords",
             "Bill status tracking and legislative progress"
           ]
-        }},
-        {{
+        }}}},
+        {{{{
           "@type": "WebSite",
-          "@id": "https://tracker.silentmajority420.com/#website",
-          "url": "https://tracker.silentmajority420.com/",
+          "@id": "https://tracker.dankreports.com/#website",
+          "url": "https://tracker.dankreports.com/",
           "name": "Cannabis Legislation Tracker",
           "description": "Track cannabis legislation across America in real-time",
-          "publisher": {{
-            "@id": "https://www.silentmajority420.com/#organization"
-          }},
-          "potentialAction": {{
+          "publisher": {{{{
+            "@id": "https://www.dankreports.com/#organization"
+          }}}},
+          "potentialAction": {{{{
             "@type": "SearchAction",
-            "target": {{
+            "target": {{{{
               "@type": "EntryPoint",
-              "urlTemplate": "https://tracker.silentmajority420.com/?search={{search_term_string}}"
-            }},
+              "urlTemplate": "https://tracker.dankreports.com/?search={{{{search_term_string}}}}"
+            }}}},
             "query-input": "required name=search_term_string"
-          }}
-        }},
-        {{
+          }}}}
+        }}}},
+        {{{{
           "@type": "Organization",
-          "@id": "https://www.silentmajority420.com/#organization",
-          "name": "The Silent Majority 420 Project",
-          "url": "https://www.silentmajority420.com/",
-          "logo": {{
+          "@id": "https://www.dankreports.com/#organization",
+          "name": "Dan K Reports",
+          "url": "https://www.dankreports.com/",
+          "logo": {{{{
             "@type": "ImageObject",
-            "url": "https://www.silentmajority420.com/content/images/size/w256h256/2025/11/output-onlinegiftools.gif",
+            "url": "https://www.dankreports.com/content/images/size/w256h256/2025/11/output-onlinegiftools.gif",
             "width": 256,
             "height": 256
-          }},
+          }}}},
           "sameAs": [
             "https://www.cbdttheory.com"
           ]
-        }},
-        {{
+        }}}},
+        {{{{
           "@type": "BreadcrumbList",
-          "@id": "https://tracker.silentmajority420.com/#breadcrumb",
+          "@id": "https://tracker.dankreports.com/#breadcrumb",
           "itemListElement": [
-            {{
+            {{{{
               "@type": "ListItem",
               "position": 1,
               "name": "Home",
-              "item": "https://www.silentmajority420.com/"
-            }},
-            {{
+              "item": "https://www.dankreports.com/"
+            }}}},
+            {{{{
               "@type": "ListItem",
               "position": 2,
               "name": "Cannabis Legislation Tracker",
-              "item": "https://tracker.silentmajority420.com/"
-            }}
+              "item": "https://tracker.dankreports.com/"
+            }}}}
           ]
-        }}
+        }}}}
       ]
-    }}
+    }}}}
     </script>
 </head>
 <body>
@@ -505,7 +504,7 @@ def generate_html(bills, last_updated):
         <div class="container">
             <div class="header-content">
                 <div class="header-title-row">
-                    <img src="logo.png" alt="Silent Majority 420 Logo" class="header-logo">
+                    <img src="logo.png" alt="Dan K Reports Logo" class="header-logo">
                     <div class="header-text">
                         <h1>Cannabis Legislation Tracker</h1>
                         <p class="subtitle">All 50 States + Federal - Real-time tracking with data-driven analysis</p>
@@ -514,7 +513,7 @@ def generate_html(bills, last_updated):
             </div>
             <div class="header-meta">
                 <span class="last-updated">Last Updated: <time datetime="{escape_html(last_updated)}">{escape_html(last_updated_formatted)}</time></span>
-                <a href="https://silentmajority420.com" class="btn-primary" rel="noopener noreferrer">Visit Silent Majority 420</a>
+                <a href="https://dankreports.com" class="btn-primary" rel="noopener noreferrer">Visit Dan K Reports</a>
             </div>
         </div>
     </header>
@@ -526,7 +525,7 @@ def generate_html(bills, last_updated):
                 This tracker monitors cannabis legislation across all 50 states and the federal government using the LegiScan API, 
                 providing up-to-date information on bills, status changes, and legislative progress. 
                 For in-depth analysis of significant bills, visit 
-                <a href="https://silentmajority420.com" rel="noopener noreferrer">Silent Majority 420</a> where we apply 
+                <a href="https://dankreports.com" rel="noopener noreferrer">Dan K Reports</a> where we apply 
                 the Consumer-Driven Black Market Displacement (CBDT) Framework to predict policy outcomes.
             </p>
         </section>
@@ -593,9 +592,9 @@ def generate_html(bills, last_updated):
 
     <footer>
         <div class="container">
-            <p>&copy; 2024 Silent Majority 420. All rights reserved.</p>
+            <p>&copy; 2025 Dan K Reports. All rights reserved.</p>
             <p>
-                <a href="https://silentmajority420.com/about" rel="noopener noreferrer">About</a> | 
+                <a href="https://dankreports.com/about" rel="noopener noreferrer">About</a> | 
                 <a href="https://www.cbdttheory.com" rel="noopener noreferrer">CBDT Framework</a> | 
                 <a href="/sitemap.xml">Sitemap</a>
             </p>
@@ -646,7 +645,7 @@ def main():
     print("  - bills.json (data backup)")
     print("  - index.html (SEO-optimized with pre-rendered content)")
     print()
-    print("✅ Google can now crawl all {len(bills)} bills immediately!")
+    print(f"✅ Google can now crawl all {len(bills)} bills immediately!")
     print()
 
 if __name__ == '__main__':
