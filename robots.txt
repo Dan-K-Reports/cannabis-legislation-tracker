@@ -1,11 +1,11 @@
-# robots.txt for tracker.silentmajority420.com
+# robots.txt for tracker.dankreports.com
 
 # Allow all search engines to crawl the site
 User-agent: *
 Allow: /
 
 # Sitemap location
-Sitemap: https://tracker.silentmajority420.com/sitemap.xml
+Sitemap: https://tracker.dankreports.com/sitemap.xml
 
 # Block access to specific files/directories if needed
 # Disallow: /private/
