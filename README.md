@@ -303,4 +303,4 @@ For questions or issues:
 
 ---
 
-**Built by Daniel Kief** | Dan K Reports(https://silentmajority420.com/cbdt-framework)
+**Built by Daniel Kief** | Dan K Reports
