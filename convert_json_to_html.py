@@ -1,11 +1,255 @@
 #!/usr/bin/env python3
 """
-Quick HTML Generator - Converts existing bills.json to SSR index.html
-Use this if you already have a recent bills.json file
+Cannabis Legislation Tracker Scraper - SSR (Server-Side Rendering) Version
+Generates a complete index.html with all bills pre-rendered for SEO.
 """
 
+import os
 import json
+import requests
 from datetime import datetime
+import time
+
+# LegiScan API configuration
+LEGISCAN_API_KEY = os.environ.get('LEGISCAN_API_KEY')
+LEGISCAN_BASE_URL = 'https://api.legiscan.com/?key={}&op={}'
+
+# LegiScan status code mapping
+STATUS_MAP = {
+    1: 'Introduced',
+    2: 'In Committee',
+    3: 'Passed Chamber',
+    4: 'Passed Both Chambers',
+    5: 'Sent to Executive',
+    6: 'Enacted/Signed',
+    7: 'Vetoed',
+    8: 'Failed/Dead',
+    9: 'Override Attempt'
+}
+
+# History action text patterns that indicate a bill is dead regardless of
+# what LegiScan's status code says. LegiScan misclassifies bills killed by
+# sine die adjournment (e.g. "Failed pursuant to Senate Joint Resolution 1")
+# as Enacted/Signed (code 6) because session-end kills register as 100%
+# progression. We audit the history array to catch these.
+FAILED_PATTERNS = [
+    'failed',
+    'defeated',
+    'died',
+    'withdrawn',
+    'tabled',
+    'indefinitely postponed',
+    'pursuant to',       # catches "failed pursuant to [joint resolution]"
+    'sine die',
+    'adjourned sine die',
+    'lost',
+    'not pass',
+    'did not pass',
+]
+
+def resolve_status(api_status_code, history):
+    """
+    Return the corrected (status_code, status_text) tuple by cross-checking
+    the bill's history array against known failure patterns.
+
+    LegiScan sometimes returns status_code=6 (Enacted/Signed) for bills that
+    were killed by a sine die adjournment resolution. The history array
+    contains the ground truth action text, so we scan it for failure signals
+    and override to 8 (Failed/Dead) when found.
+
+    Args:
+        api_status_code: The raw integer status from the LegiScan getBill response.
+        history: The list of history dicts from bill_info.get('history', []).
+
+    Returns:
+        (int, str) tuple of corrected status_code and display text.
+    """
+    # Only bother auditing if LegiScan claims the bill succeeded. Statuses
+    # 1-4 are in-progress or passed-chamber states that don't need overriding;
+    # 7 (Vetoed) and 8 (Failed) are already correct; 9 is edge-case.
+    if api_status_code in (6, 5):  # Enacted or Sent to Executive
+        for entry in (history or []):
+            action_text = (entry.get('action') or '').lower()
+            if any(pattern in action_text for pattern in FAILED_PATTERNS):
+                return 8, 'Failed/Dead'
+
+    return api_status_code, STATUS_MAP.get(api_status_code, 'Unknown')
+
+# All US states plus federal
+STATES = {
+    'US': 'Federal',
+    'AL': 'Alabama', 'AK': 'Alaska', 'AZ': 'Arizona', 'AR': 'Arkansas',
+    'CA': 'California', 'CO': 'Colorado', 'CT': 'Connecticut', 'DE': 'Delaware',
+    'FL': 'Florida', 'GA': 'Georgia', 'HI': 'Hawaii', 'ID': 'Idaho',
+    'IL': 'Illinois', 'IN': 'Indiana', 'IA': 'Iowa', 'KS': 'Kansas',
+    'KY': 'Kentucky', 'LA': 'Louisiana', 'ME': 'Maine', 'MD': 'Maryland',
+    'MA': 'Massachusetts', 'MI': 'Michigan', 'MN': 'Minnesota', 'MS': 'Mississippi',
+    'MO': 'Missouri', 'MT': 'Montana', 'NE': 'Nebraska', 'NV': 'Nevada',
+    'NH': 'New Hampshire', 'NJ': 'New Jersey', 'NM': 'New Mexico', 'NY': 'New York',
+    'NC': 'North Carolina', 'ND': 'North Dakota', 'OH': 'Ohio', 'OK': 'Oklahoma',
+    'OR': 'Oregon', 'PA': 'Pennsylvania', 'RI': 'Rhode Island', 'SC': 'South Carolina',
+    'SD': 'South Dakota', 'TN': 'Tennessee', 'TX': 'Texas', 'UT': 'Utah',
+    'VT': 'Vermont', 'VA': 'Virginia', 'WA': 'Washington', 'WV': 'West Virginia',
+    'WI': 'Wisconsin', 'WY': 'Wyoming'
+}
+
+# Policy-relevant terms to filter noise
+POLICY_TERMS = [
+    'bank', 'banking', 'tax', 'deduction', '280e', 'safe banking',
+    'commerce', 'interstate', 'import', 'export', 'trade',
+    'administration', 'regulation', 'regulatory', 'rule', 'rulemaking',
+    'license', 'licensing', 'licensee', 'permit',
+    'scheduling', 'schedule i', 'schedule ii', 'schedule iii',
+    'decriminalization', 'legalization', 'legalize',
+    'medical', 'recreational', 'adult-use', 'adult use',
+    'dispensary', 'dispensaries', 'cultivation', 'cultivator',
+    'manufacturer', 'manufacturing', 'processor', 'retailer',
+    'delivery', 'transporter',
+    'enforcement', 'compliance', 'violation', 'penalty', 'penalties',
+    'black market', 'gray market', 'grey market', 'illicit',
+    'testing', 'test', 'potency', 'thc', 'cbd', 'contaminant',
+    'pesticide', 'lab', 'laboratory',
+    'equity', 'social equity', 'expungement', 'record', 'conviction',
+    'tribal', 'reservation',
+    'fund', 'funding', 'grant', 'appropriation', 'cash fund',
+    'revenue', 'fee', 'fees',
+    'possession', 'consume', 'consumption', 'use', 'impairment',
+    'dui', 'dwi', 'workplace',
+    'hemp', 'research', 'study', 'pilot', 'program'
+]
+
+def is_relevant_bill(title, description):
+    """Filter out non-policy bills"""
+    text = (title + ' ' + description).lower()
+    cannabis_mentioned = any(term in text for term in ['cannabis', 'marijuana', 'marihuana'])
+    
+    if not cannabis_mentioned:
+        return False
+    
+    policy_mentioned = any(term in text for term in POLICY_TERMS)
+    return policy_mentioned
+
+def fetch_bills_for_state(state_code, state_name):
+    """Fetch cannabis-related bills for a specific state"""
+    print(f"Fetching bills for {state_name}...")
+    
+    year_param = 2
+    search_url = LEGISCAN_BASE_URL.format(LEGISCAN_API_KEY, 'getSearch')
+    search_params = {
+        'state': state_code,
+        'query': 'cannabis OR marijuana',
+        'year': year_param
+    }
+    
+    try:
+        response = requests.get(search_url, params=search_params)
+        
+        if response.status_code != 200:
+            print(f"  Warning: Error fetching {state_name}: HTTP {response.status_code}")
+            return []
+        
+        data = response.json()
+        
+        if data.get('status') != 'OK':
+            print(f"  Warning: API Error for {state_name}: {data.get('alert', {}).get('message', 'Unknown')}")
+            return []
+        
+        search_results = data.get('searchresult', {})
+        
+        if not search_results or search_results.get('summary', {}).get('count', 0) == 0:
+            print(f"  Info: No bills found for {state_name}")
+            return []
+        
+        bills = []
+        filtered_count = 0
+        
+        for bill_id, bill_data in search_results.items():
+            if bill_id == 'summary':
+                continue
+            
+            bill_url = LEGISCAN_BASE_URL.format(LEGISCAN_API_KEY, 'getBill')
+            bill_params = {'id': bill_data.get('bill_id')}
+            
+            try:
+                bill_response = requests.get(bill_url, params=bill_params)
+                
+                if bill_response.status_code == 200:
+                    bill_detail = bill_response.json()
+                    
+                    if bill_detail.get('status') == 'OK':
+                        bill_info = bill_detail.get('bill', {})
+                        
+                        title = bill_info.get('title', '')
+                        description = bill_info.get('description', '')
+                        
+                        if not is_relevant_bill(title, description):
+                            filtered_count += 1
+                            continue
+                        
+                        raw_status_code = bill_info.get('status', 0)
+                        history = bill_info.get('history', [])
+                        status_code, status_text = resolve_status(raw_status_code, history)
+                        
+                        bill = {
+                            'id': bill_info.get('bill_id'),
+                            'state_code': state_code,
+                            'state_name': state_name,
+                            'bill_number': bill_info.get('bill_number'),
+                            'title': title,
+                            'description': description[:500],
+                            'status': status_text,
+                            'status_code': status_code,
+                            'status_date': bill_info.get('status_date'),
+                            'url': bill_info.get('url'),
+                            'last_action': bill_info.get('last_action'),
+                            'last_action_date': bill_info.get('last_action_date'),
+                            'sponsors': [],
+                            'analysis_url': None
+                        }
+                        
+                        for sponsor in bill_info.get('sponsors', [])[:5]:
+                            bill['sponsors'].append({
+                                'name': sponsor.get('name'),
+                                'party': sponsor.get('party', ''),
+                                'role': sponsor.get('role', '')
+                            })
+                        
+                        bills.append(bill)
+                
+                time.sleep(0.5)
+                
+            except Exception as e:
+                print(f"  Warning: Error fetching bill details: {e}")
+                continue
+        
+        if filtered_count > 0:
+            print(f"  Info: Filtered out {filtered_count} non-policy bills")
+        print(f"  Success: Found {len(bills)} relevant bills for {state_name}")
+        return bills
+        
+    except Exception as e:
+        print(f"  Warning: Error for {state_name}: {e}")
+        return []
+
+def fetch_all_bills():
+    """Fetch cannabis bills from all states"""
+    if not LEGISCAN_API_KEY:
+        print("ERROR: LEGISCAN_API_KEY environment variable not set")
+        return []
+    
+    print("=" * 70)
+    print("Cannabis Legislation Tracker - Fetching All States")
+    print("=" * 70)
+    print()
+    
+    all_bills = []
+    
+    for state_code, state_name in STATES.items():
+        bills = fetch_bills_for_state(state_code, state_name)
+        all_bills.extend(bills)
+        time.sleep(1)
+    
+    return all_bills
 
 def escape_html(text):
     """Escape HTML special characters"""
@@ -46,14 +290,14 @@ def format_date(date_str):
 
 def generate_bill_card_html(bill):
     """Generate HTML for a single bill card"""
-    status_class = get_status_class(bill.get('status', 'Unknown'))
-    sponsors = bill.get('sponsors', [])[:3]
-    has_more_sponsors = len(bill.get('sponsors', [])) > 3
+    status_class = get_status_class(bill['status'])
+    sponsors = bill['sponsors'][:3]
+    has_more_sponsors = len(bill['sponsors']) > 3
     
     date_to_use = bill.get('last_action_date') or bill.get('status_date')
     last_action_date = format_date(date_to_use)
     
-    is_federal = bill.get('state_code') == 'US'
+    is_federal = bill['state_code'] == 'US'
     state_badge_class = 'state-badge-federal' if is_federal else 'state-badge-state'
     
     # Build sponsors HTML
@@ -62,10 +306,10 @@ def generate_bill_card_html(bill):
         sponsor_tags = []
         for sponsor in sponsors:
             party = f" ({escape_html(sponsor.get('party'))})" if sponsor.get('party') else ''
-            sponsor_tags.append(f'<span class="sponsor-tag">{escape_html(sponsor.get("name", ""))}{party}</span>')
+            sponsor_tags.append(f'<span class="sponsor-tag">{escape_html(sponsor["name"])}{party}</span>')
         
         if has_more_sponsors:
-            sponsor_tags.append(f'<span class="sponsor-tag">+{len(bill.get("sponsors", [])) - 3} more</span>')
+            sponsor_tags.append(f'<span class="sponsor-tag">+{len(bill["sponsors"]) - 3} more</span>')
         
         sponsors_html = f'''
             <div class="bill-sponsors">
@@ -80,7 +324,7 @@ def generate_bill_card_html(bill):
     if bill.get('analysis_url'):
         analysis_btn = f'''
             <a href="{escape_html(bill['analysis_url'])}" target="_blank" rel="noopener noreferrer" class="btn btn-analysis">
-                Read BMDE Analysis
+                Read CBDT Analysis
             </a>
         '''
     else:
@@ -91,22 +335,22 @@ def generate_bill_card_html(bill):
         '''
     
     return f'''
-        <article class="bill-card" data-state="{escape_html(bill.get('state_name', ''))}" data-state-code="{escape_html(bill.get('state_code', ''))}" data-status="{escape_html(bill.get('status', ''))}" data-date="{escape_html(date_to_use or '')}">
+        <article class="bill-card" data-state="{escape_html(bill['state_name'])}" data-state-code="{escape_html(bill['state_code'])}" data-status="{escape_html(bill['status'])}" data-date="{escape_html(date_to_use or '')}">
             <div class="bill-header">
                 <div class="bill-title">
                     <div class="bill-meta-top">
-                        <span class="state-badge {state_badge_class}">{escape_html(bill.get('state_name', ''))}</span>
-                        <span class="bill-number">{escape_html(bill.get('bill_number', ''))}</span>
+                        <span class="state-badge {state_badge_class}">{escape_html(bill['state_name'])}</span>
+                        <span class="bill-number">{escape_html(bill['bill_number'])}</span>
                     </div>
-                    <h3>{escape_html(bill.get('title', ''))}</h3>
+                    <h3>{escape_html(bill['title'])}</h3>
                 </div>
                 <div class="bill-status {status_class}">
-                    {escape_html(bill.get('status', 'Unknown'))}
+                    {escape_html(bill['status'])}
                 </div>
             </div>
             
             <p class="bill-description">
-                {escape_html(bill.get('description', ''))}
+                {escape_html(bill['description'])}
             </p>
             
             <div class="bill-meta">
@@ -118,7 +362,7 @@ def generate_bill_card_html(bill):
             {sponsors_html}
             
             <div class="bill-actions">
-                <a href="{escape_html(bill.get('url', '#'))}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
+                <a href="{escape_html(bill['url'])}" target="_blank" rel="noopener noreferrer" class="btn btn-secondary">
                     View on LegiScan
                 </a>
                 {analysis_btn}
@@ -134,12 +378,12 @@ def generate_html(bills, last_updated):
     
     # Calculate stats
     total_bills = len(bills)
-    states_with_bills = set(bill.get('state_name', '') for bill in bills if bill.get('state_name'))
+    states_with_bills = set(bill['state_name'] for bill in bills)
     total_states = len(states_with_bills)
     
     active_bills = [
         b for b in bills 
-        if not any(term in b.get('status', '').lower() for term in ['enacted', 'vetoed', 'failed', 'dead'])
+        if not any(term in b['status'].lower() for term in ['enacted', 'vetoed', 'failed', 'dead'])
     ]
     active_count = len(active_bills)
     
@@ -147,10 +391,7 @@ def generate_html(bills, last_updated):
     analyzed_count = len(analyzed_bills)
     
     # Format last updated
-    try:
-        last_updated_formatted = datetime.fromisoformat(last_updated.replace('Z', '+00:00')).strftime('%B %d, %Y at %I:%M %p')
-    except:
-        last_updated_formatted = last_updated
+    last_updated_formatted = datetime.fromisoformat(last_updated.replace('Z', '+00:00')).strftime('%B %d, %Y at %I:%M %p')
     
     # Generate bill cards HTML
     bill_cards_html = '\n'.join(generate_bill_card_html(bill) for bill in bills)
@@ -171,8 +412,8 @@ def generate_html(bills, last_updated):
     <!-- Primary Meta Tags -->
     <title>Cannabis Legislation Tracker - Real-Time Bills Across All 50 States | Dan K Reports</title>
     <meta name="title" content="Cannabis Legislation Tracker - Real-Time Bills Across All 50 States | Dan K Reports">
-    <meta name="description" content="Track cannabis legislation in real-time across all 50 states and federal government. Monitor bills, status changes, and legislative progress with data-driven BMDE analysis.">
-    <meta name="keywords" content="cannabis legislation, marijuana bills, cannabis policy tracker, legalization tracker, cannabis reform, state cannabis laws, federal cannabis bills, BMDE, Black Market Death Equation, cannabis market analysis">
+    <meta name="description" content="Track cannabis legislation in real-time across all 50 states and federal government. Monitor bills, status changes, and legislative progress with data-driven CBDT Framework analysis.">
+    <meta name="keywords" content="cannabis legislation, marijuana bills, cannabis policy tracker, legalization tracker, cannabis reform, state cannabis laws, federal cannabis bills, CBDT Framework, cannabis market analysis">
     <meta name="author" content="Daniel Kief">
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
     <link rel="canonical" href="https://tracker.dankreports.com/">
@@ -181,7 +422,7 @@ def generate_html(bills, last_updated):
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://tracker.dankreports.com/">
     <meta property="og:title" content="Cannabis Legislation Tracker - Real-Time Bills Across All 50 States">
-    <meta property="og:description" content="Track cannabis legislation in real-time across all 50 states and federal government. Monitor bills, status changes, and legislative progress with data-driven BMDE analysis.">
+    <meta property="og:description" content="Track cannabis legislation in real-time across all 50 states and federal government. Monitor bills, status changes, and legislative progress with data-driven CBDT Framework analysis.">
     <meta property="og:image" content="https://tracker.dankreports.com/og-image.jpg">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
@@ -191,7 +432,7 @@ def generate_html(bills, last_updated):
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:url" content="https://tracker.dankreports.com/">
     <meta name="twitter:title" content="Cannabis Legislation Tracker - Real-Time Bills Across All 50 States">
-    <meta name="twitter:description" content="Track cannabis legislation in real-time across all 50 states and federal government with BMDE analysis.">
+    <meta name="twitter:description" content="Track cannabis legislation in real-time across all 50 states and federal government with CBDT Framework analysis.">
     <meta name="twitter:image" content="https://tracker.dankreports.com/og-image.jpg">
     
     <!-- Additional SEO Meta Tags -->
@@ -205,18 +446,18 @@ def generate_html(bills, last_updated):
     <link rel="apple-touch-icon" href="logo.png">
     
     <!-- Preconnect for Performance -->
-    <link rel="preconnect" href="https://www.dankreports.com">
-    <link rel="dns-prefetch" href="https://www.dankreports.com">
+    <link rel="preconnect" href="https://dankreports.com">
+    <link rel="dns-prefetch" href="https://dankreports.com">
     
     <!-- Stylesheet -->
     <link rel="stylesheet" href="style.css">
     
     <!-- Structured Data / Schema.org JSON-LD -->
     <script type="application/ld+json">
-    {{
+    {{{{
       "@context": "https://schema.org",
       "@graph": [
-        {{
+        {{{{
           "@type": "WebApplication",
           "@id": "https://tracker.dankreports.com/#webapp",
           "name": "Cannabis Legislation Tracker",
@@ -224,20 +465,25 @@ def generate_html(bills, last_updated):
           "operatingSystem": "Web Browser",
           "url": "https://tracker.dankreports.com/",
           "description": "Real-time tracking of cannabis legislation across all 50 states and federal government using LegiScan API with data-driven CBDT Framework analysis.",
-          "offers": {{
+          "offers": {{{{
             "@type": "Offer",
             "price": "0",
             "priceCurrency": "USD"
-          }},
-          "author": {{
+          }}}},
+          "author": {{{{
             "@type": "Person",
-            "name": "Daniel Kief"
-          }},
-          "publisher": {{
+            "name": "Daniel Kief",
+            "url": "https://www.dankreports.com/"
+          }}}},
+          "publisher": {{{{
             "@type": "Organization",
             "name": "Dan K Reports",
-            "url": "https://www.dankreports.com/"
-          }},
+            "url": "https://www.dankreports.com/",
+            "logo": {{{{
+              "@type": "ImageObject",
+              "url": "https://www.dankreports.com/content/images/size/w256h256/2025/11/output-onlinegiftools.gif"
+            }}}}
+          }}}},
           "featureList": [
             "Real-time cannabis bill tracking across all 50 states",
             "Federal cannabis legislation monitoring",
@@ -246,51 +492,60 @@ def generate_html(bills, last_updated):
             "Advanced filtering by state, status, and keywords",
             "Bill status tracking and legislative progress"
           ]
-        }},
-        {{
+        }}}},
+        {{{{
           "@type": "WebSite",
           "@id": "https://tracker.dankreports.com/#website",
           "url": "https://tracker.dankreports.com/",
           "name": "Cannabis Legislation Tracker",
           "description": "Track cannabis legislation across America in real-time",
-          "publisher": {{
+          "publisher": {{{{
             "@id": "https://www.dankreports.com/#organization"
-          }},
-          "potentialAction": {{
+          }}}},
+          "potentialAction": {{{{
             "@type": "SearchAction",
-            "target": {{
+            "target": {{{{
               "@type": "EntryPoint",
-              "urlTemplate": "https://tracker.dankreports.com/?search={{search_term_string}}"
-            }},
+              "urlTemplate": "https://tracker.dankreports.com/?search={{{{search_term_string}}}}"
+            }}}},
             "query-input": "required name=search_term_string"
-          }}
-        }},
-        {{
+          }}}}
+        }}}},
+        {{{{
           "@type": "Organization",
           "@id": "https://www.dankreports.com/#organization",
           "name": "Dan K Reports",
-          "url": "https://www.dankreports.com/"
-        }},
-        {{
+          "url": "https://www.dankreports.com/",
+          "logo": {{{{
+            "@type": "ImageObject",
+            "url": "https://www.dankreports.com/content/images/size/w256h256/2025/11/output-onlinegiftools.gif",
+            "width": 256,
+            "height": 256
+          }}}},
+          "sameAs": [
+            "https://www.cbdttheory.com"
+          ]
+        }}}},
+        {{{{
           "@type": "BreadcrumbList",
           "@id": "https://tracker.dankreports.com/#breadcrumb",
           "itemListElement": [
-            {{
+            {{{{
               "@type": "ListItem",
               "position": 1,
               "name": "Home",
               "item": "https://www.dankreports.com/"
-            }},
-            {{
+            }}}},
+            {{{{
               "@type": "ListItem",
               "position": 2,
               "name": "Cannabis Legislation Tracker",
               "item": "https://tracker.dankreports.com/"
-            }}
+            }}}}
           ]
-        }}
+        }}}}
       ]
-    }}
+    }}}}
     </script>
 </head>
 <body>
@@ -307,7 +562,7 @@ def generate_html(bills, last_updated):
             </div>
             <div class="header-meta">
                 <span class="last-updated">Last Updated: <time datetime="{escape_html(last_updated)}">{escape_html(last_updated_formatted)}</time></span>
-                <a href="https://www.dankreports.com" class="btn-primary" rel="noopener noreferrer">Visit Dan K Reports</a>
+                <a href="https://dankreports.com" class="btn-primary" rel="noopener noreferrer">Visit Dan K Reports</a>
             </div>
         </div>
     </header>
@@ -319,8 +574,8 @@ def generate_html(bills, last_updated):
                 This tracker monitors cannabis legislation across all 50 states and the federal government using the LegiScan API, 
                 providing up-to-date information on bills, status changes, and legislative progress. 
                 For in-depth analysis of significant bills, visit 
-                <a href="https://www.dankreports.com" rel="noopener noreferrer">Dan K Reports</a> where we apply 
-                the Black Market Death Equation (BMDE) to predict policy outcomes.
+                <a href="https://dankreports.com" rel="noopener noreferrer">Dan K Reports</a> where we apply 
+                the Consumer-Driven Black Market Displacement (CBDT) Framework to predict policy outcomes.
             </p>
         </section>
 
@@ -386,9 +641,10 @@ def generate_html(bills, last_updated):
 
     <footer>
         <div class="container">
-            <p>&copy; 2025 Daniel Kief. All rights reserved.</p>
+            <p>&copy; 2025 Dan K Reports. All rights reserved.</p>
             <p>
-                <a href="https://www.dankreports.com" rel="noopener noreferrer">Dan K Reports</a> | 
+                <a href="https://dankreports.com/about" rel="noopener noreferrer">About</a> | 
+                <a href="https://www.cbdttheory.com" rel="noopener noreferrer">CBDT Framework</a> | 
                 <a href="/sitemap.xml">Sitemap</a>
             </p>
         </div>
@@ -402,58 +658,43 @@ def generate_html(bills, last_updated):
     return html
 
 def main():
-    """Main function - load bills.json and generate index.html"""
+    """Main function"""
     
-    print("=" * 70)
-    print("Quick HTML Generator - Converting bills.json to index.html")
-    print("=" * 70)
-    print()
-    
-    # Load bills.json
-    try:
-        with open('bills.json', 'r', encoding='utf-8') as f:
-            data = json.load(f)
-    except FileNotFoundError:
-        print("❌ ERROR: bills.json not found!")
-        print()
-        print("Make sure bills.json is in the same directory as this script.")
-        return
-    except json.JSONDecodeError as e:
-        print(f"❌ ERROR: Invalid JSON in bills.json: {e}")
-        return
-    
-    bills = data.get('bills', [])
-    last_updated = data.get('last_updated', datetime.now().isoformat())
+    # Fetch bills
+    bills = fetch_all_bills()
     
     if not bills:
-        print("❌ ERROR: No bills found in bills.json")
+        print("ERROR: No bills found")
         return
     
-    print(f"✅ Loaded {len(bills)} bills from bills.json")
-    print(f"   Last updated: {last_updated}")
-    print()
+    # Get timestamp
+    last_updated = datetime.now().isoformat()
+    
+    # Save JSON (for reference/backup)
+    with open('bills.json', 'w', encoding='utf-8') as f:
+        json.dump({
+            'last_updated': last_updated,
+            'total_bills': len(bills),
+            'bills': bills
+        }, f, indent=2, ensure_ascii=False)
     
     # Generate HTML
-    print("🔨 Generating index.html...")
     html_content = generate_html(bills, last_updated)
     
     # Save HTML
     with open('index.html', 'w', encoding='utf-8') as f:
         f.write(html_content)
     
-    print("✅ index.html created successfully!")
     print()
     print("=" * 70)
     print("SUCCESS!")
     print("=" * 70)
-    print(f"Generated index.html with {len(bills)} pre-rendered bills")
+    print(f"Total bills: {len(bills)}")
+    print(f"Files generated:")
+    print("  - bills.json (data backup)")
+    print("  - index.html (SEO-optimized with pre-rendered content)")
     print()
-    print("✅ Google can now crawl all your bills immediately!")
-    print()
-    print("Next steps:")
-    print("1. Test locally: python -m http.server 8000")
-    print("2. View source to verify bills are pre-rendered")
-    print("3. Deploy: git add . && git commit -m 'Rebrand to Dan K Reports' && git push")
+    print(f"✅ Google can now crawl all {len(bills)} bills immediately!")
     print()
 
 if __name__ == '__main__':
