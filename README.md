@@ -8,7 +8,7 @@ A comprehensive real-time tracker for cannabis legislation across all 50 U.S. st
 - **Real-time Updates**: Automatically fetches the latest bills from LegiScan API
 - **Smart Filtering**: Search and filter by state, status, keywords, and date
 - **State-by-State View**: Filter to see specific states or federal-only
-- **AI-Powered Analysis**: Links to in-depth CBDT Framework analysis for significant bills
+- **AI-Powered Analysis**: Links to in-depth BMDE Framework analysis for significant bills
 - **Responsive Design**: Beautiful, modern interface that works on all devices
 - **Open Source**: Free to use and modify
 
@@ -298,7 +298,7 @@ For questions or issues:
 ## Acknowledgments
 
 - LegiScan API for providing comprehensive legislative data
-- The CBDT Framework for cannabis market analysis methodology
+- The BMDE Framework for cannabis market analysis methodology
 - The cannabis policy reform community
 
 ---
